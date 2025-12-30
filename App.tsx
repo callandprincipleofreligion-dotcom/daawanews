@@ -107,6 +107,39 @@ const App: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
 
+  // Likes System with LocalStorage
+  const [articleLikes, setArticleLikes] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('articleLikes');
+    if (saved) return JSON.parse(saved);
+    // Initial random values for demo
+    const initial: Record<string, number> = {};
+    INITIAL_ARTICLES.forEach(a => initial[a.id] = Math.floor(Math.random() * 50) + 10);
+    return initial;
+  });
+
+  const [userLikes, setUserLikes] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('userLikes');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem('articleLikes', JSON.stringify(articleLikes));
+  }, [articleLikes]);
+
+  useEffect(() => {
+    localStorage.setItem('userLikes', JSON.stringify(userLikes));
+  }, [userLikes]);
+
+  const handleLike = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const alreadyLiked = userLikes[id];
+    setUserLikes(prev => ({ ...prev, [id]: !alreadyLiked }));
+    setArticleLikes(prev => ({
+      ...prev,
+      [id]: (prev[id] || 0) + (alreadyLiked ? -1 : 1)
+    }));
+  };
+
   const [selectedAuthor, setSelectedAuthor] = useState<string>(lang === 'ar' ? 'الكل' : 'All');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -119,7 +152,6 @@ const App: React.FC = () => {
       setDeferredPrompt(e);
       setShowInstallBtn(true);
     });
-
     window.addEventListener('appinstalled', () => {
       setShowInstallBtn(false);
       setDeferredPrompt(null);
@@ -130,9 +162,7 @@ const App: React.FC = () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShowInstallBtn(false);
-    }
+    if (outcome === 'accepted') setShowInstallBtn(false);
     setDeferredPrompt(null);
   };
 
@@ -347,7 +377,14 @@ const App: React.FC = () => {
               {filteredArticles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {filteredArticles.map(article => (
-                    <ArticleCard key={article.id} article={article} onClick={setActiveArticle} />
+                    <ArticleCard 
+                      key={article.id} 
+                      article={article} 
+                      likesCount={articleLikes[article.id] || 0}
+                      isLiked={!!userLikes[article.id]}
+                      onLike={(e) => handleLike(e, article.id)}
+                      onClick={setActiveArticle} 
+                    />
                   ))}
                 </div>
               ) : (
@@ -364,6 +401,7 @@ const App: React.FC = () => {
             </div>
 
             <aside className="lg:col-span-4 space-y-10">
+              {/* Announcements Section */}
               <section className={`rounded-[40px] shadow-xl border overflow-hidden transition-colors ${isDarkMode ? 'bg-[#444444] border-slate-700' : 'bg-white border-slate-50 shadow-slate-100'}`}>
                 <div className={`p-6 flex items-center gap-4 transition-colors ${isDarkMode ? 'bg-brand-orange text-brand-black' : 'bg-brand-black text-white'}`}>
                   <div className={`p-3 rounded-2xl transition-colors ${isDarkMode ? 'bg-brand-black text-brand-orange' : 'bg-brand-orange text-brand-black'}`}><Megaphone size={24} /></div>
@@ -383,13 +421,9 @@ const App: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <div className={`p-4 transition-colors ${isDarkMode ? 'bg-brand-black/10' : 'bg-slate-50/50'}`}>
-                  <button className={`w-full py-4 rounded-2xl font-black text-sm border-2 border-dashed transition-all ${isDarkMode ? 'text-brand-orange border-slate-700 hover:bg-brand-orange hover:text-brand-black' : 'text-brand-black border-slate-100 hover:bg-brand-orange hover:text-white'}`}>
-                    {t.allAnnouncements}
-                  </button>
-                </div>
               </section>
 
+              {/* Research Hub Section */}
               <section className={`rounded-[40px] p-8 shadow-2xl relative overflow-hidden group transition-all duration-500 ${isDarkMode ? 'bg-brand-dark shadow-none border border-brand-orange/20' : 'bg-brand-orange shadow-amber-200'}`}>
                 <div className="relative z-10">
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-xl transition-colors ${isDarkMode ? 'bg-brand-orange text-brand-black' : 'bg-brand-black text-brand-orange'}`}><BookOpen size={32} /></div>
@@ -405,45 +439,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className={`py-20 relative overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-brand-dark' : 'bg-brand-black'}`}>
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
-            <div>
-              <div className="flex items-center gap-4 mb-8">
-                <Logo />
-                <h4 className="text-white text-3xl font-black">{lang === 'ar' ? <>صحيفة <span className="text-brand-orange">دعوة</span></> : <><span className="text-brand-orange">Daawa</span> News</>}</h4>
-              </div>
-              <p className="text-sm font-medium leading-loose text-slate-500 mb-8">{t.footerDesc}</p>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* Mobile Menu */}
-      <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-brand-black/60" onClick={() => setIsMobileMenuOpen(false)} />
-        <div className={`absolute right-0 top-0 h-full w-4/5 max-w-xs transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'} ${isDarkMode ? 'bg-[#333333]' : 'bg-white'}`}>
-          <div className="p-6 border-b flex justify-between items-center bg-brand-black text-white">
-            <h2 className="text-xl font-black">القائمة</h2>
-            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-white/10 rounded-full"><X size={20} /></button>
-          </div>
-          <div className="p-6 space-y-4">
-            {categories.map(cat => (
-              <button key={cat.name} onClick={() => { setSelectedCategory(cat.name as any); setIsMobileMenuOpen(false); }} className={`flex items-center gap-4 w-full p-4 rounded-xl text-lg font-black transition-all ${selectedCategory === cat.name ? 'bg-brand-orange text-brand-black' : isDarkMode ? 'text-slate-200' : 'text-slate-600'}`}>
-                {cat.icon}
-                {cat.name}
-              </button>
-            ))}
-            {showInstallBtn && (
-              <button onClick={handleInstallClick} className="flex items-center gap-4 w-full p-4 rounded-xl text-lg font-black bg-brand-orange text-brand-black animate-pulse">
-                <Download size={20} />
-                {t.installApp}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
+      {/* Login & Modals */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-brand-black/95 backdrop-blur-md">
           <div className={`w-full max-w-md rounded-[40px] p-8 md:p-10 border transition-colors ${isDarkMode ? 'bg-[#444444] border-slate-700' : 'bg-white border-slate-100'}`}>

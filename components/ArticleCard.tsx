@@ -1,17 +1,20 @@
 
 import React from 'react';
 import { Article } from '../types';
-import { Calendar, User, ChevronLeft } from 'lucide-react';
+import { Calendar, User, ChevronLeft, Heart } from 'lucide-react';
 
 interface ArticleCardProps {
   article: Article;
+  likesCount: number;
+  isLiked: boolean;
+  onLike: (e: React.MouseEvent) => void;
   onClick: (article: Article) => void;
 }
 
-export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onClick }) => {
+export const ArticleCard: React.FC<ArticleCardProps> = ({ article, likesCount, isLiked, onLike, onClick }) => {
   return (
     <div 
-      className="rounded-[40px] shadow-sm hover:shadow-2xl hover:translate-y-[-8px] transition-all duration-500 overflow-hidden cursor-pointer group flex flex-col h-full border dark:bg-[#444444] dark:border-slate-700 dark:shadow-none bg-white border-slate-100"
+      className="group relative rounded-[40px] shadow-sm hover:shadow-2xl hover:translate-y-[-8px] transition-all duration-500 overflow-hidden cursor-pointer flex flex-col h-full border dark:bg-[#444444] dark:border-slate-700 dark:shadow-none bg-white border-slate-100"
       onClick={() => onClick(article)}
     >
       <div className="relative h-60 md:h-72 overflow-hidden">
@@ -20,9 +23,25 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onClick }) =>
           alt={article.title} 
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
         />
+        
+        {/* Category Badge */}
         <div className="absolute top-6 right-6 bg-brand-black text-brand-orange text-[10px] md:text-xs px-4 py-1.5 rounded-full font-black uppercase tracking-wider shadow-xl border border-brand-orange/20">
           {article.category}
         </div>
+
+        {/* Like Button Overlay */}
+        <button 
+          onClick={onLike}
+          className={`absolute top-6 left-6 p-3 rounded-2xl transition-all duration-300 flex items-center gap-2 shadow-lg backdrop-blur-md ${
+            isLiked 
+              ? 'bg-red-500 text-white' 
+              : 'bg-white/90 text-slate-600 hover:text-red-500 hover:scale-110'
+          }`}
+        >
+          <Heart size={18} fill={isLiked ? "currentColor" : "none"} className={isLiked ? "animate-bounce" : ""} />
+          <span className="text-xs font-black">{likesCount}</span>
+        </button>
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">
            <span className="text-white font-black flex items-center gap-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
              فتح المقال بالكامل
